@@ -825,7 +825,7 @@ def build_excel(path: Path, acik, on, sonuc, marks, new_ids, cfg, stats) -> Path
 
 # ----------------------------------------------------------------- web sayfası
 BAKIM = re.compile(r"pflege|mäh|mahd|rasen|baum|gehölz|hecke|winterdienst|schnee|streu|unterhaltung|kontrolle|fäll|"
-                   r"rodung|wildkraut|unkraut|begleitgrün|grauflächen|friedhof|facility", re.I)
+                   r"rodung|wildkraut|unkraut|begleitgrün|grauflächen|friedhof|facility|pflanz|hochstamm", re.I)
 
 
 def is_tipi(t: dict) -> str:
