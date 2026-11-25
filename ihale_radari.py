@@ -236,6 +236,7 @@ def load_plz_table() -> dict:
             log(f"UYARI: Posta kodu tablosu indirilemedi ({e}). Mesafe NUTS bölgesinden tahmin edilecek.")
             return {}
     acc: dict[str, list] = {}
+    towns: dict[str, list] = {}
     try:
         with zipfile.ZipFile(path) as z:
             name = next(n for n in z.namelist() if n.upper().startswith("DE") and n.endswith(".txt"))
@@ -244,13 +245,40 @@ def load_plz_table() -> dict:
                 if len(p) < 11:
                     continue
                 try:
-                    acc.setdefault(p[1], []).append((float(p[9]), float(p[10]), p[2]))
+                    la, lo = float(p[9]), float(p[10])
                 except ValueError:
                     continue
+                acc.setdefault(p[1], []).append((la, lo, p[2]))
+                if p[4] == "NW":  # sadece NRW yer adları (başlıktan konum bulmak için)
+                    nm = re.split(r"[,(/]", p[2])[0].strip()
+                    for cand in {nm, nm.split(" ")[0]}:
+                        if len(cand) >= 5 and cand.lower() not in TOWN_STOP:
+                            towns.setdefault(cand, []).append((la, lo))
     except Exception as e:  # noqa: BLE001
         log(f"UYARI: Posta kodu tablosu okunamadı: {e}")
         return {}
+    TOWNS.clear()
+    TOWNS.update({k: (sum(a for a, _ in v) / len(v), sum(b for _, b in v) / len(v)) for k, v in towns.items()})
     return {k: (sum(a for a, _, _ in v) / len(v), sum(b for _, b, _ in v) / len(v), v[0][2]) for k, v in acc.items()}
+
+
+TOWNS: dict[str, tuple] = {}
+TOWN_STOP = {"garten", "linden", "grund", "wald", "berge", "hagen a.t.w.", "brücke", "kirchen", "heide",
+             "brand", "busch", "holte", "stein", "mühle", "felde", "werth", "hohne", "kreuz", "bruch", "neues",
+             "neubau", "straße", "ober", "unter", "mittel", "alten", "frieden", "sonne", "lohne", "winter", "sommer",
+             "berg", "baum", "pflege", "rasen", "garten", "hecke"}
+
+
+def town_from_text(text: str):
+    """Başlıkta geçen NRW yer adından konum: 'Örtlichkeit Kürten', 'bei Würselen', 'AM Dorsten'."""
+    best = None
+    words = re.findall(r"[A-ZÄÖÜ][a-zäöüß]+", text or "")
+    pairs = [f"{a} {b}" for a, b in zip(words, words[1:])] + re.findall(r"[A-ZÄÖÜ][a-zäöüß]+-[A-ZÄÖÜ][a-zäöüß]+", text or "")
+    for w in pairs + words:
+        for cand in (w,):
+            if cand in TOWNS and (best is None or len(cand) > len(best)):
+                best = cand
+    return (best, *TOWNS[best]) if best else None
 
 
 # ----------------------------------------------------------------- Kaynak 1: Bekanntmachungsservice
@@ -559,13 +587,24 @@ def score_all(items: list[dict], cfg: dict, plz_tab: dict) -> list[dict]:
             _, la, lo = NUTS3[t["nuts"]]
             km = haversine(*home, la, lo)
             km_kaynak = "~Kreis"
+        elif (t["nuts"] in ("", "DEA") or (t["nuts"].startswith("DEA") and len(t["nuts"]) < 5)) and \
+                (hit := town_from_text(t["baslik"] + " " + t["lotlar"])):
+            km = haversine(*home, hit[1], hit[2])
+            km_kaynak = "~Ort"
+            t["yer"] = t["yer"] or hit[0]
+        elif t["nuts"] == "DEA" or (t["nuts"].startswith("DEA") and len(t["nuts"]) < 5):
+            km_kaynak = "NRW?"  # NRW içinde ama yer belli değil -> listede tut, mesafe yok
         t["km"] = round(km) if km is not None else None
         t["km_kaynak"] = km_kaynak
         t["kreis"] = NUTS3.get(t["nuts"], ("",))[0]
-        if km_kaynak.startswith("~"):
+        if km_kaynak == "~Kreis":
             t["kreis"] += " (km tahmini)"
             t["yer"] = t["yer"] or NUTS3[t["nuts"]][0]
-        if km is None or km > radius:
+        elif km_kaynak == "~Ort":
+            t["kreis"] = "(km başlıktaki yerden)"
+        elif km_kaynak == "NRW?":
+            t["kreis"] = "NRW – yer ilanda"
+        if (km is None and km_kaynak != "NRW?") or (km is not None and km > radius):
             continue
 
         hay_title = (t["baslik"] + " " + t["lotlar"]).lower()
@@ -587,7 +626,7 @@ def score_all(items: list[dict], cfg: dict, plz_tab: dict) -> list[dict]:
             reasons.append("Metin: " + ", ".join(kw_d[:3]))
         if not cpv_hit and not kw_t and not kw_d:
             continue
-        score += round(20 * max(0.0, 1 - km / radius))
+        score += round(20 * max(0.0, 1 - km / radius)) if km is not None else 0
         t["puan"] = min(100, score)
         t["neden"] = " | ".join(reasons)
         if t["puan"] < cfg.get("min_puan", 0):
@@ -787,7 +826,7 @@ def build_html(path: Path, acik, on, sonuc, new_ids, cfg, stats) -> None:
     def row(t):
         return {
             "id": t["id"], "puan": t["puan"], "baslik": t["baslik"], "lotlar": t["lotlar"][:300],
-            "makam": t["makam"], "yer": t["yer"], "km": t["km"], "tahmini": t["km_kaynak"].startswith("~"),
+            "makam": t["makam"], "yer": t["yer"], "km": t["km"], "tahmini": t["km_kaynak"].startswith("~"), "nrw": t["km_kaynak"] == "NRW?",
             "tur": t["kategori"], "deger": t["deger"], "neden": t["neden"],
             "son": fmt_d(t["son_tarih"]), "kalan": (t["son_tarih"] - now).days if t["son_tarih"] else None,
             "yayin": fmt_d(t["yayin"])[:10], "link": t["link"], "belge": t["belge"],

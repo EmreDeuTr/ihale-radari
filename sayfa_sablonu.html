@@ -86,7 +86,7 @@ const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt
 const T = {
  tr: {title:"İhale Radarı", sub:(m,k,g)=>`${m} çevresi ${k} km · güncellendi ${g}`, s1:"açık ihale", s2:"yeni (bugün)", s3:"son tarih 7 gün içinde", s4:"yakında çıkacak",
    tp_bakim:"Bakım işleri (çim, hecke, ağaç, kış)", tp_yapim:"Peyzaj yapım (Außenanlagen)", tp_all:"Tüm işler", t_acik:"Açık ihaleler", t_on:"Yakında çıkacak", t_sonuc:"Sonuçlananlar", q:"Ara: şehir, iş, kurum…", allkm:"Tüm mesafeler", allst:"Tüm durumlar", unmarked:"İşaretsiz",
-   onlynew:"Sadece yeni", xl:"Excel indir ↓", score:"puan", son:"Son", days:"gün", nodl:"Son tarih ilanda", pub:"Yayın", winner:"Kazanan", approx:"yakl.",
+   onlynew:"Sadece yeni", xl:"Excel indir ↓", score:"puan", son:"Son", days:"gün", nodl:"Son tarih ilanda", pub:"Yayın", winner:"Kazanan", approx:"yakl.", nrw:"NRW – yer ilanda",
    open:"İlanı aç", docs:"Belgeler / platform", status:"Durum…", lots:"Lose", empty:"Bu filtreye uyan ilan yok.", nw:"YENİ", untitled:"(başlıksız)",
    legend:"Soldaki sayı uygunluk puanı (0–100): peyzaj iş kodu (CPV) +45, başlıkta peyzaj kelimesi +20–35, metinde +15'e kadar, yakınlık +20'ye kadar. 80+ kesin sizin işiniz, 50–70 bakmaya değer.",
    why:{"Başlık:":"Başlık:","Metin:":"Metin:"},
@@ -94,7 +94,7 @@ const T = {
    foot:k=>`Kaynaklar: ${k}. Her sabah otomatik güncellenir; bir günün ilanları ertesi sabah görünür. Durum işaretleri sadece bu tarayıcıda saklanır. Teklif, ilan sayfasındaki ihale platformu üzerinden verilir. Bazı küçük belediye ilanları (sadece kendi sitesinde yayınlananlar) bu kaynaklarda olmayabilir.`},
  de: {title:"Ausschreibungsradar", sub:(m,k,g)=>`Umkreis ${k} km um ${m} · aktualisiert ${g}`, s1:"offene Ausschreibungen", s2:"neu (heute)", s3:"Frist in 7 Tagen", s4:"Vorinformationen",
    tp_bakim:"Pflege (Mahd, Hecke, Baum, Winterdienst)", tp_yapim:"GaLaBau-Neubau (Außenanlagen)", tp_all:"Alle Leistungen", t_acik:"Offene Ausschreibungen", t_on:"Vorinformationen", t_sonuc:"Vergeben", q:"Suche: Ort, Leistung, Vergabestelle…", allkm:"Alle Entfernungen", allst:"Alle Status", unmarked:"Ohne Markierung",
-   onlynew:"Nur neue", xl:"Excel herunterladen ↓", score:"Punkte", son:"Frist", days:"Tage", nodl:"Frist siehe Bekanntmachung", pub:"Veröffentlicht", winner:"Zuschlag an", approx:"ca.",
+   onlynew:"Nur neue", xl:"Excel herunterladen ↓", score:"Punkte", son:"Frist", days:"Tage", nodl:"Frist siehe Bekanntmachung", pub:"Veröffentlicht", winner:"Zuschlag an", approx:"ca.", nrw:"NRW – Ort siehe Bekanntmachung",
    open:"Bekanntmachung öffnen", docs:"Unterlagen / Plattform", status:"Status…", lots:"Lose", empty:"Keine Ausschreibungen für diesen Filter.", nw:"NEU", untitled:"(ohne Titel)",
    legend:"Die Zahl links ist die Passgenauigkeit (0–100): GaLaBau-CPV-Code +45, Fachbegriff im Titel +20–35, im Text bis +15, Nähe bis +20. Ab 80 klar passend, 50–70 prüfenswert.",
    why:{"Başlık:":"Titel:","Metin:":"Text:"},
@@ -149,7 +149,7 @@ function card(x) {
       (x.bedel ? `<span class="m">· ${esc(Math.round(x.bedel).toLocaleString("de-DE"))} €</span>` : "");
   }
   const sel = tab === "sonuc" ? "" : `<select data-id="${esc(x.id)}" aria-label="${esc(t.status)}"><option value="">${esc(t.status)}</option>${STV.map(v => `<option value="${esc(v)}"${v === m ? " selected" : ""}>${esc(t.st[v])}</option>`).join("")}</select>`;
-  const place = [x.yer, x.km !== null ? `${x.km} km${x.tahmini ? " (" + t.approx + ")" : ""}` : ""].filter(Boolean).join(" · ");
+  const place = [x.yer, x.km !== null ? `${x.km} km${x.tahmini ? " (" + t.approx + ")" : ""}` : (x.nrw ? t.nrw : "")].filter(Boolean).join(" · ");
   return `<article class="card${x.yeni ? " new" : ""}">
     <div class="sc" title="${esc(t.legend)}">${esc(x.puan)}<small>${esc(t.score)}</small></div>
     <div class="t">${x.yeni ? `<span class="nw">${esc(t.nw)}</span>` : ""}${esc(x.baslik || t.untitled)}</div>
