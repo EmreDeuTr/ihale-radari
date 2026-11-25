@@ -19,10 +19,7 @@
     "773": "Gartenbau-Dienstleistungen (Grünpflege, Mähen, Baum-/Heckenschnitt)",
     "77211": "Baumfällung / Baumpflege",
     "90620000": "Winterdienst - Schneeräumung",
-    "90630000": "Winterdienst - Eisbeseitigung",
-    "03451": "Pflanzen (Lieferung)",
-    "03452": "Bäume (Lieferung)",
-    "375352": "Spielplatzgeräte"
+    "90630000": "Winterdienst - Eisbeseitigung"
   },
   "anahtar_kelimeler": [
     "grünpflege",
@@ -90,7 +87,15 @@
     "malerarbeit",
     "maler- und",
     "tiefbau- und wasserleitung",
-    "kanalsanierung"
+    "kanalsanierung",
+    "lieferung von",
+    "lieferung eines",
+    "lieferung einer",
+    "beschaffung von",
+    "kauf von",
+    "rasenmäher",
+    "kehrmaschine",
+    "fahrzeug"
   ],
   "email": {
     "aktif": false,
