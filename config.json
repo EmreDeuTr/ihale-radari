@@ -15,7 +15,6 @@
     "45112700": "Landschaftsgärtnerische Arbeiten (Grünflächen, Parks, Friedhöfe, Spielplätze...)",
     "45236": "Flächenarbeiten Sport- und Freizeitanlagen",
     "45342000": "Zaunbau",
-    "45233222": "Pflasterarbeiten",
     "773": "Gartenbau-Dienstleistungen (Grünpflege, Mähen, Baum-/Heckenschnitt)",
     "77211": "Baumfällung / Baumpflege",
     "90620000": "Winterdienst - Schneeräumung",
@@ -101,7 +100,19 @@
     "bestandespflege",
     "holzbringung",
     "anbau an klinik",
-    "frei finanzierten"
+    "frei finanzierten",
+    "deckensanierung",
+    "asphalt",
+    "kanalbau",
+    "kanalneubau",
+    "straßenbau",
+    "schacht",
+    "geländer",
+    "haltestellen",
+    "metallbau",
+    "laufbahn",
+    "gleis",
+    "umschlag-bagger"
   ],
   "email": {
     "aktif": false,
@@ -113,5 +124,6 @@
       "ornek@gmail.com"
     ],
     "sadece_yeni_varsa": true
-  }
+  },
+  "min_puan_yer_belirsiz": 60
 }

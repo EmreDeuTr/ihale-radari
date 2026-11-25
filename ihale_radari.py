@@ -17,6 +17,7 @@ Kullanım:
 from __future__ import annotations
 
 import argparse
+import html as html_lib
 import datetime as dt
 import io
 import json
@@ -105,11 +106,11 @@ DEFAULT_CONFIG = {
     "kaynak_ted": True,
     "son_tarihi_gecenleri_gizle": True,
     "min_puan": 30,
+    "min_puan_yer_belirsiz": 60,
     "cpv_onekleri": {
         "45112700": "Landschaftsgärtnerische Arbeiten (Grünflächen, Parks, Friedhöfe, Spielplätze...)",
         "45236": "Flächenarbeiten Sport- und Freizeitanlagen",
         "45342000": "Zaunbau",
-        "45233222": "Pflasterarbeiten",
         "773": "Gartenbau-Dienstleistungen (Grünpflege, Mähen, Baum-/Heckenschnitt)",
         "77211": "Baumfällung / Baumpflege",
         "90620000": "Winterdienst - Schneeräumung",
@@ -180,7 +181,7 @@ def txt(x) -> str:
         return txt(next(iter(x.values()), ""))
     if isinstance(x, list):
         return "; ".join(dict.fromkeys(t for t in (txt(i) for i in x) if t))
-    return re.sub(r"\s+", " ", str(x)).strip()
+    return re.sub(r"\s+", " ", html_lib.unescape(str(x))).strip()
 
 
 def parse_date(s) -> dt.datetime | None:
@@ -588,7 +589,7 @@ def score_all(items: list[dict], cfg: dict, plz_tab: dict) -> list[dict]:
             km = haversine(*home, la, lo)
             km_kaynak = "~Kreis"
         elif (t["nuts"] in ("", "DEA") or (t["nuts"].startswith("DEA") and len(t["nuts"]) < 5)) and \
-                (hit := town_from_text(t["baslik"] + " " + t["lotlar"])):
+                (hit := town_from_text(t["baslik"] + " " + t["lotlar"]) or town_from_text(t["makam"])):
             km = haversine(*home, hit[1], hit[2])
             km_kaynak = "~Ort"
             t["yer"] = t["yer"] or hit[0]
@@ -629,6 +630,8 @@ def score_all(items: list[dict], cfg: dict, plz_tab: dict) -> list[dict]:
         score += round(20 * max(0.0, 1 - km / radius)) if km is not None else 0
         t["puan"] = min(100, score)
         t["neden"] = " | ".join(reasons)
+        if t["km_kaynak"] == "NRW?" and t["puan"] < cfg.get("min_puan_yer_belirsiz", 60):
+            continue  # yeri bilinmeyen NRW ilanı: sadece çok net peyzaj işiyse göster
         if t["puan"] < cfg.get("min_puan", 0):
             continue
         out.append(t)
