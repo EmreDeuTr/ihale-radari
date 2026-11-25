@@ -4,6 +4,9 @@ on:
   schedule:
     - cron: "10 5 * * *"   # her gun ~06:10 (Almanya saati, kis)
   workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ["config.json", "ihale_radari.py", "sayfa_sablonu.html", ".github/workflows/tara.yml"]
 
 permissions:
   contents: write
