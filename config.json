@@ -10,7 +10,7 @@
   "kaynak_bkms": true,
   "kaynak_ted": true,
   "son_tarihi_gecenleri_gizle": true,
-  "min_puan": 30,
+  "min_puan": 45,
   "cpv_onekleri": {
     "45112700": "Landschaftsgärtnerische Arbeiten (Grünflächen, Parks, Friedhöfe, Spielplätze...)",
     "45236": "Flächenarbeiten Sport- und Freizeitanlagen",
@@ -83,7 +83,14 @@
     "tga ",
     "kehrmaschine",
     "dachabdichtung",
-    "schwimmb"
+    "schwimmb",
+    "dacharbeit",
+    "rohbau",
+    "estrich",
+    "malerarbeit",
+    "maler- und",
+    "tiefbau- und wasserleitung",
+    "kanalsanierung"
   ],
   "email": {
     "aktif": false,
