@@ -14,8 +14,11 @@
 --red:#c8372d;--redbg:light-dark(#fde5e2,#3a1714);--amb:#a86a00;--ambbg:light-dark(#fff1cf,#33270c);--acc:#2f8f5b}
 *{box-sizing:border-box;min-width:0}
 body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 "Hanken Grotesk",system-ui,sans-serif;overflow-x:clip}
-header{background:var(--g);color:#fff;padding:28px max(5vw,16px) 22px}
-h1{margin:0;font-weight:300;font-size:clamp(32px,6vw,48px);line-height:1.05}
+header{background:var(--g);color:#fff;padding:28px max(5vw,16px) 22px;position:relative}
+.lang{position:absolute;top:16px;right:max(5vw,16px);display:flex;border:1px solid rgba(255,255,255,.5);border-radius:999px;overflow:hidden}
+.lang button{background:transparent;color:#fff;border:0;font:inherit;font-weight:600;padding:8px 14px;min-height:40px;cursor:pointer}
+.lang button[aria-pressed=true]{background:#fff;color:var(--g)}
+h1{margin:0;padding-right:120px;font-weight:300;font-size:clamp(32px,6vw,48px);line-height:1.05}
 .sub{opacity:.85;margin-top:6px}
 .stats{display:flex;flex-wrap:wrap;gap:10px 28px;margin-top:18px}
 .stat b{display:block;font-size:30px;font-weight:700;line-height:1}
@@ -32,7 +35,9 @@ h1{margin:0;font-weight:300;font-size:clamp(32px,6vw,48px);line-height:1.05}
 .list{display:grid;gap:10px}
 .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px 16px;display:grid;grid-template-columns:52px minmax(0,1fr);gap:4px 14px}
 .card.new{border-color:var(--acc);box-shadow:inset 4px 0 0 var(--acc)}
-.sc{grid-row:span 3;width:52px;height:52px;border-radius:50%;display:grid;place-items:center;font-weight:700;background:var(--g2);color:var(--g)}
+.sc{grid-row:span 3;width:52px;height:52px;border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;font-weight:700;background:var(--g2);color:var(--g);line-height:1}
+.sc small{font-size:10px;font-weight:600;margin-top:3px;opacity:.8}
+.legend{font-size:13px;color:var(--mut);margin:-4px 0 12px}
 .t{font-weight:600;font-size:17px;line-height:1.3}
 .t .nw{font-size:12px;background:var(--acc);color:#fff;border-radius:6px;padding:1px 6px;margin-right:6px;vertical-align:2px}
 .m{color:var(--mut);font-size:14px}
@@ -50,23 +55,25 @@ footer{color:var(--mut);font-size:13px;margin-top:28px;line-height:1.6}
 </head>
 <body>
 <header>
-  <h1>İhale Radarı</h1>
+  <div class="lang" role="group" aria-label="Dil / Sprache"><button data-l="tr">TR</button><button data-l="de">DE</button></div>
+  <h1 id="h1">İhale Radarı</h1>
   <div class="sub" id="sub"></div>
   <div class="stats" id="stats"></div>
 </header>
 <div class="wrap">
   <div class="tabs" role="tablist">
-    <button class="tab" role="tab" data-k="acik" aria-selected="true">Açık ihaleler</button>
-    <button class="tab" role="tab" data-k="on" aria-selected="false">Yakında çıkacak</button>
-    <button class="tab" role="tab" data-k="sonuc" aria-selected="false">Sonuçlananlar</button>
+    <button class="tab" role="tab" data-k="acik" aria-selected="true"></button>
+    <button class="tab" role="tab" data-k="on" aria-selected="false"></button>
+    <button class="tab" role="tab" data-k="sonuc" aria-selected="false"></button>
   </div>
   <div class="bar">
-    <input type="search" id="q" placeholder="Ara: şehir, iş, kurum…" aria-label="Ara">
-    <select id="km" aria-label="Mesafe"><option value="999">Tüm mesafeler</option><option value="30">≤ 30 km</option><option value="50">≤ 50 km</option><option value="70">≤ 70 km</option></select>
-    <select id="st" aria-label="Durum"><option value="">Tüm durumlar</option><option value="-">İşaretsiz</option><option>İncele</option><option>Teklif Ver</option><option>Teklif Verildi</option><option>Pas</option></select>
-    <label class="chk"><input type="checkbox" id="nw"> Sadece yeni</label>
-    <a class="xl" href="Ihaleler.xlsx">Excel indir ↓</a>
+    <input type="search" id="q">
+    <select id="km"><option value="999"></option><option value="30">≤ 30 km</option><option value="50">≤ 50 km</option><option value="70">≤ 70 km</option></select>
+    <select id="st"></select>
+    <label class="chk"><input type="checkbox" id="nw"> <span id="nwl"></span></label>
+    <a class="xl" id="xl" href="Ihaleler.xlsx"></a>
   </div>
+  <div class="legend" id="legend"></div>
   <div class="list" id="list"></div>
   <footer id="foot"></footer>
 </div>
@@ -75,47 +82,80 @@ footer{color:var(--mut);font-size:13px;margin-top:28px;line-height:1.6}
 const D = __DATA__;
 const M = __META__;
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const T = {
+ tr: {title:"İhale Radarı", sub:(m,k,g)=>`${m} çevresi ${k} km · güncellendi ${g}`, s1:"açık ihale", s2:"yeni (bugün)", s3:"son tarih 7 gün içinde", s4:"yakında çıkacak",
+   t_acik:"Açık ihaleler", t_on:"Yakında çıkacak", t_sonuc:"Sonuçlananlar", q:"Ara: şehir, iş, kurum…", allkm:"Tüm mesafeler", allst:"Tüm durumlar", unmarked:"İşaretsiz",
+   onlynew:"Sadece yeni", xl:"Excel indir ↓", score:"puan", son:"Son", days:"gün", nodl:"Son tarih ilanda", pub:"Yayın", winner:"Kazanan", approx:"yakl.",
+   open:"İlanı aç", docs:"Belgeler / platform", status:"Durum…", lots:"Lose", empty:"Bu filtreye uyan ilan yok.", nw:"YENİ", untitled:"(başlıksız)",
+   legend:"Soldaki sayı uygunluk puanı (0–100): peyzaj iş kodu (CPV) +45, başlıkta peyzaj kelimesi +20–35, metinde +15'e kadar, yakınlık +20'ye kadar. 80+ kesin sizin işiniz, 50–70 bakmaya değer.",
+   why:{"Başlık:":"Başlık:","Metin:":"Metin:"},
+   st:{"İncele":"İncele","Teklif Ver":"Teklif Ver","Teklif Verildi":"Teklif Verildi","Pas":"Pas"},
+   foot:k=>`Kaynaklar: ${k}. Her sabah otomatik güncellenir; bir günün ilanları ertesi sabah görünür. Durum işaretleri sadece bu tarayıcıda saklanır. Teklif, ilan sayfasındaki ihale platformu üzerinden verilir. Bazı küçük belediye ilanları (sadece kendi sitesinde yayınlananlar) bu kaynaklarda olmayabilir.`},
+ de: {title:"Ausschreibungsradar", sub:(m,k,g)=>`Umkreis ${k} km um ${m} · aktualisiert ${g}`, s1:"offene Ausschreibungen", s2:"neu (heute)", s3:"Frist in 7 Tagen", s4:"Vorinformationen",
+   t_acik:"Offene Ausschreibungen", t_on:"Vorinformationen", t_sonuc:"Vergeben", q:"Suche: Ort, Leistung, Vergabestelle…", allkm:"Alle Entfernungen", allst:"Alle Status", unmarked:"Ohne Markierung",
+   onlynew:"Nur neue", xl:"Excel herunterladen ↓", score:"Punkte", son:"Frist", days:"Tage", nodl:"Frist siehe Bekanntmachung", pub:"Veröffentlicht", winner:"Zuschlag an", approx:"ca.",
+   open:"Bekanntmachung öffnen", docs:"Unterlagen / Plattform", status:"Status…", lots:"Lose", empty:"Keine Ausschreibungen für diesen Filter.", nw:"NEU", untitled:"(ohne Titel)",
+   legend:"Die Zahl links ist die Passgenauigkeit (0–100): GaLaBau-CPV-Code +45, Fachbegriff im Titel +20–35, im Text bis +15, Nähe bis +20. Ab 80 klar passend, 50–70 prüfenswert.",
+   why:{"Başlık:":"Titel:","Metin:":"Text:"},
+   st:{"İncele":"Prüfen","Teklif Ver":"Angebot abgeben","Teklif Verildi":"Angebot abgegeben","Pas":"Kein Interesse"},
+   foot:k=>`Quellen: ${k}. Tägliche automatische Aktualisierung; Bekanntmachungen eines Tages erscheinen am nächsten Morgen. Status-Markierungen werden nur in diesem Browser gespeichert. Angebote werden über die in der Bekanntmachung genannte Vergabeplattform abgegeben. Einzelne kleine kommunale Ausschreibungen (nur auf eigener Website veröffentlicht) sind ggf. nicht enthalten.`}
+};
+let L = "tr";
+try { L = localStorage.getItem("ihale-dil") || "tr"; } catch (e) {}
 const KEY = "ihale-durum";
 let marks = {};
 try { marks = JSON.parse(localStorage.getItem(KEY) || "{}"); } catch (e) {}
 const save = () => { try { localStorage.setItem(KEY, JSON.stringify(marks)); } catch (e) {} };
 let tab = "acik";
-const q = document.getElementById("q"), km = document.getElementById("km"), st = document.getElementById("st"), nw = document.getElementById("nw");
-const list = document.getElementById("list");
+const $ = id => document.getElementById(id);
+const q = $("q"), km = $("km"), st = $("st"), nw = $("nw"), list = $("list");
+const STV = ["İncele", "Teklif Ver", "Teklif Verildi", "Pas"];
+const why = s => { let o = String(s || ""); for (const [a, b] of Object.entries(T[L].why)) o = o.split(a).join(b); return o; };
 
-document.getElementById("sub").textContent = `${M.merkez} çevresi ${M.km} km · güncellendi ${M.guncel}`;
-const week = D.acik.filter(t => t.kalan !== null && t.kalan <= 7).length;
-document.getElementById("stats").innerHTML = [
-  [D.acik.length, "açık ihale"], [D.acik.filter(t => t.yeni).length + D.on.filter(t => t.yeni).length, "yeni (bugün)"],
-  [week, "son tarih 7 gün içinde"], [D.on.length, "yakında çıkacak"]
-].map(([n, l]) => `<div class="stat"><b>${esc(n)}</b><span>${esc(l)}</span></div>`).join("");
-document.getElementById("foot").innerHTML =
-  `Kaynaklar: ${esc(M.kaynaklar)}. Her sabah otomatik güncellenir; bir günün ilanları ertesi sabah görünür. ` +
-  `Durum işaretleri sadece bu tarayıcıda saklanır. Teklif, ilan sayfasındaki ihale platformu üzerinden verilir. ` +
-  `Bazı küçük belediye ilanları (sadece kendi sitesinde yayınlananlar) bu kaynaklarda olmayabilir.`;
+function chrome() {
+  const t = T[L];
+  document.documentElement.lang = L;
+  document.title = t.title;
+  $("h1").textContent = t.title;
+  $("sub").textContent = t.sub(M.merkez, M.km, M.guncel);
+  const week = D.acik.filter(x => x.kalan !== null && x.kalan <= 7).length;
+  $("stats").innerHTML = [[D.acik.length, t.s1], [D.acik.filter(x => x.yeni).length + D.on.filter(x => x.yeni).length, t.s2], [week, t.s3], [D.on.length, t.s4]]
+    .map(([n, l]) => `<div class="stat"><b>${esc(n)}</b><span>${esc(l)}</span></div>`).join("");
+  document.querySelectorAll(".tab").forEach(b => b.textContent = t["t_" + b.dataset.k]);
+  q.placeholder = t.q; q.setAttribute("aria-label", t.q);
+  km.options[0].textContent = t.allkm;
+  const cur = st.value;
+  st.innerHTML = `<option value="">${esc(t.allst)}</option><option value="-">${esc(t.unmarked)}</option>` + STV.map(v => `<option value="${esc(v)}">${esc(t.st[v])}</option>`).join("");
+  st.value = cur;
+  $("nwl").textContent = t.onlynew;
+  $("xl").textContent = t.xl;
+  $("legend").textContent = t.legend;
+  $("foot").textContent = t.foot(M.kaynaklar);
+  document.querySelectorAll(".lang button").forEach(b => b.setAttribute("aria-pressed", b.dataset.l === L));
+}
 
-function card(t) {
-  const m = marks[t.id] || "";
+function card(x) {
+  const t = T[L], m = marks[x.id] || "";
   let dl = "";
   if (tab === "acik") {
-    const cls = t.kalan === null ? "" : t.kalan < 7 ? " r" : t.kalan < 14 ? " a" : "";
-    dl = t.son ? `<span class="dl${cls}">Son: ${esc(t.son)}${t.kalan !== null ? ` · ${esc(t.kalan)} gün` : ""}</span>` : `<span class="dl">Son tarih ilanda</span>`;
+    const cls = x.kalan === null ? "" : x.kalan < 7 ? " r" : x.kalan < 14 ? " a" : "";
+    dl = x.son ? `<span class="dl${cls}">${esc(t.son)}: ${esc(x.son)}${x.kalan !== null ? ` · ${esc(x.kalan)} ${esc(x.kalan === 1 && L === "de" ? "Tag" : t.days)}` : ""}</span>` : `<span class="dl">${esc(t.nodl)}</span>`;
   } else if (tab === "on") {
-    dl = `<span class="dl">Yayın: ${esc(t.yayin)}</span>`;
+    dl = `<span class="dl">${esc(t.pub)}: ${esc(x.yayin)}</span>`;
   } else {
-    dl = `<span class="dl">${esc(t.yayin)}</span>` + (t.kazanan ? `<span class="m">Kazanan: <b>${esc(t.kazanan)}</b></span>` : "") +
-      (t.bedel ? `<span class="m">· ${esc(Math.round(t.bedel).toLocaleString("de-DE"))} €</span>` : "");
+    dl = `<span class="dl">${esc(x.yayin)}</span>` + (x.kazanan ? `<span class="m">${esc(t.winner)}: <b>${esc(x.kazanan)}</b></span>` : "") +
+      (x.bedel ? `<span class="m">· ${esc(Math.round(x.bedel).toLocaleString("de-DE"))} €</span>` : "");
   }
-  const sel = tab === "sonuc" ? "" : `<select data-id="${esc(t.id)}" aria-label="Durum">${["", "İncele", "Teklif Ver", "Teklif Verildi", "Pas"].map(o => `<option${o === m ? " selected" : ""} value="${esc(o)}">${esc(o || "Durum…")}</option>`).join("")}</select>`;
-  const place = [t.yer, t.km !== null ? `${t.km} km${t.tahmini ? " (yakl.)" : ""}` : ""].filter(Boolean).join(" · ");
-  return `<article class="card${t.yeni ? " new" : ""}">
-    <div class="sc" title="Uygunluk puanı">${esc(t.puan)}</div>
-    <div class="t">${t.yeni ? '<span class="nw">YENİ</span>' : ""}${esc(t.baslik || "(başlıksız)")}</div>
-    <div class="m">${esc(t.makam)}${place ? " — " + esc(place) : ""}${t.tur ? " · " + esc(t.tur) : ""}${t.deger ? " · ~" + esc(Math.round(t.deger).toLocaleString("de-DE")) + " €" : ""}</div>
+  const sel = tab === "sonuc" ? "" : `<select data-id="${esc(x.id)}" aria-label="${esc(t.status)}"><option value="">${esc(t.status)}</option>${STV.map(v => `<option value="${esc(v)}"${v === m ? " selected" : ""}>${esc(t.st[v])}</option>`).join("")}</select>`;
+  const place = [x.yer, x.km !== null ? `${x.km} km${x.tahmini ? " (" + t.approx + ")" : ""}` : ""].filter(Boolean).join(" · ");
+  return `<article class="card${x.yeni ? " new" : ""}">
+    <div class="sc" title="${esc(t.legend)}">${esc(x.puan)}<small>${esc(t.score)}</small></div>
+    <div class="t">${x.yeni ? `<span class="nw">${esc(t.nw)}</span>` : ""}${esc(x.baslik || t.untitled)}</div>
+    <div class="m">${esc(x.makam)}${place ? " — " + esc(place) : ""}${x.tur ? " · " + esc(x.tur) : ""}${x.deger ? " · ~" + esc(Math.round(x.deger).toLocaleString("de-DE")) + " €" : ""}</div>
     <div>
       <div class="row">${dl}</div>
-      <div class="why">${esc(t.neden)}${t.lotlar ? " · Lose: " + esc(t.lotlar) : ""}</div>
-      <div class="row"><a class="btn" href="${esc(t.link)}" target="_blank" rel="noopener">İlanı aç</a>${t.belge ? `<a class="btn o" href="${esc(t.belge)}" target="_blank" rel="noopener">Belgeler / platform</a>` : ""}${sel}</div>
+      <div class="why">${esc(why(x.neden))}${x.lotlar ? " · " + esc(t.lots) + ": " + esc(x.lotlar) : ""}</div>
+      <div class="row"><a class="btn" href="${esc(x.link)}" target="_blank" rel="noopener">${esc(t.open)}</a>${x.belge ? `<a class="btn o" href="${esc(x.belge)}" target="_blank" rel="noopener">${esc(t.docs)}</a>` : ""}${sel}</div>
     </div>
   </article>`;
 }
@@ -123,13 +163,18 @@ function card(t) {
 function render() {
   const s = q.value.trim().toLocaleLowerCase("de");
   const max = +km.value;
-  const items = D[tab].filter(t =>
-    (!s || [t.baslik, t.makam, t.yer, t.lotlar, t.neden, t.kazanan].join(" ").toLocaleLowerCase("de").includes(s)) &&
-    (t.km === null || t.km <= max) && (!nw.checked || t.yeni) &&
-    (!st.value || (st.value === "-" ? !marks[t.id] : marks[t.id] === st.value)));
-  list.innerHTML = items.length ? items.map(card).join("") : `<div class="empty">Bu filtreye uyan ilan yok.</div>`;
+  const items = D[tab].filter(x =>
+    (!s || [x.baslik, x.makam, x.yer, x.lotlar, x.neden, x.kazanan].join(" ").toLocaleLowerCase("de").includes(s)) &&
+    (x.km === null || x.km <= max) && (!nw.checked || x.yeni) &&
+    (!st.value || (st.value === "-" ? !marks[x.id] : marks[x.id] === st.value)));
+  list.innerHTML = items.length ? items.map(card).join("") : `<div class="empty">${esc(T[L].empty)}</div>`;
 }
 
+document.querySelectorAll(".lang button").forEach(b => b.addEventListener("click", () => {
+  L = b.dataset.l;
+  try { localStorage.setItem("ihale-dil", L); } catch (e) {}
+  chrome(); render();
+}));
 document.querySelectorAll(".tab").forEach(b => b.addEventListener("click", () => {
   tab = b.dataset.k;
   document.querySelectorAll(".tab").forEach(x => x.setAttribute("aria-selected", x === b));
@@ -142,6 +187,7 @@ list.addEventListener("change", e => {
   if (e.target.value) marks[id] = e.target.value; else delete marks[id];
   save();
 });
+chrome();
 render();
 }
 </script>

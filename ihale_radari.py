@@ -521,7 +521,7 @@ def parse_ted(no: dict) -> dict:
     cpv = no.get("classification-cpv") or []
     return {
         "id": f"TED:{pub}", "version": 0, "kaynak": "TED (AB)", "tur": kind,
-        "baslik": re.sub(r"^Deutschland\s*[–-]\s*[^–]+?\s*[–-]\s*", "", txt(no.get("notice-title"))), "lotlar": "",
+        "baslik": re.sub(r"^Deutschland\s+[–-]\s+.+?\s+[–-]\s+", "", txt(no.get("notice-title"))), "lotlar": "",
         "aciklama": txt(no.get("description-lot"))[:3000],
         "makam": txt(no.get("buyer-name")), "yer": txt(no.get("buyer-city")), "plz": "",
         "nuts": nuts[:5].upper(), "son_tarih": min(dls) if dls else None,
