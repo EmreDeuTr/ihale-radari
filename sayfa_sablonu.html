@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>İhale Radarı</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@300;400;600;700&display=swap" rel="stylesheet">
+<style>
+:root{color-scheme:light dark;
+--bg:light-dark(#f4f6f1,#0f1712);--card:light-dark(#ffffff,#16221a);--ink:light-dark(#14201a,#e6efe8);
+--mut:light-dark(#5b6b61,#93a69a);--line:light-dark(#dfe6dc,#243429);--g:#1f6b45;--g2:light-dark(#e3f1e7,#173726);
+--red:#c8372d;--redbg:light-dark(#fde5e2,#3a1714);--amb:#a86a00;--ambbg:light-dark(#fff1cf,#33270c);--acc:#2f8f5b}
+*{box-sizing:border-box;min-width:0}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 "Hanken Grotesk",system-ui,sans-serif;overflow-x:clip}
+header{background:var(--g);color:#fff;padding:28px max(5vw,16px) 22px}
+h1{margin:0;font-weight:300;font-size:clamp(32px,6vw,48px);line-height:1.05}
+.sub{opacity:.85;margin-top:6px}
+.stats{display:flex;flex-wrap:wrap;gap:10px 28px;margin-top:18px}
+.stat b{display:block;font-size:30px;font-weight:700;line-height:1}
+.stat span{font-size:13px;opacity:.85}
+.wrap{max-width:1100px;margin:0 auto;padding:18px max(4vw,12px) 60px}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
+.tab{border:1px solid var(--line);background:var(--card);color:var(--ink);padding:10px 16px;border-radius:999px;font:inherit;cursor:pointer;min-height:44px}
+.tab[aria-selected=true]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:14px}
+.bar input[type=search],.bar select{font:inherit;font-size:16px;padding:9px 12px;border:1px solid var(--line);border-radius:10px;background:var(--card);color:var(--ink);min-height:44px}
+.bar input[type=search]{flex:1 1 220px}
+.chk{display:flex;align-items:center;gap:6px;min-height:44px;padding:0 6px}
+.xl{margin-left:auto;color:var(--g);font-weight:600;text-decoration:none;padding:10px 4px}
+.list{display:grid;gap:10px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px 16px;display:grid;grid-template-columns:52px minmax(0,1fr);gap:4px 14px}
+.card.new{border-color:var(--acc);box-shadow:inset 4px 0 0 var(--acc)}
+.sc{grid-row:span 3;width:52px;height:52px;border-radius:50%;display:grid;place-items:center;font-weight:700;background:var(--g2);color:var(--g)}
+.t{font-weight:600;font-size:17px;line-height:1.3}
+.t .nw{font-size:12px;background:var(--acc);color:#fff;border-radius:6px;padding:1px 6px;margin-right:6px;vertical-align:2px}
+.m{color:var(--mut);font-size:14px}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:6px}
+.dl{font-size:14px;font-weight:600;padding:4px 10px;border-radius:8px;background:var(--g2);white-space:nowrap}
+.dl.r{background:var(--redbg);color:var(--red)}.dl.a{background:var(--ambbg);color:var(--amb)}
+.why{font-size:13px;color:var(--mut)}
+.btn{display:inline-flex;align-items:center;min-height:40px;padding:0 14px;border-radius:10px;background:var(--g);color:#fff;text-decoration:none;font-weight:600;font-size:14px}
+.btn.o{background:transparent;color:var(--g);border:1px solid var(--line)}
+.row select{font:inherit;font-size:14px;padding:8px;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--ink);min-height:40px;margin-left:auto}
+.empty{padding:40px;text-align:center;color:var(--mut)}
+footer{color:var(--mut);font-size:13px;margin-top:28px;line-height:1.6}
+@media(max-width:600px){.card{grid-template-columns:42px minmax(0,1fr)}.sc{width:42px;height:42px;font-size:14px}.row select{margin-left:0}.xl{margin-left:0}}
+</style>
+</head>
+<body>
+<header>
+  <h1>İhale Radarı</h1>
+  <div class="sub" id="sub"></div>
+  <div class="stats" id="stats"></div>
+</header>
+<div class="wrap">
+  <div class="tabs" role="tablist">
+    <button class="tab" role="tab" data-k="acik" aria-selected="true">Açık ihaleler</button>
+    <button class="tab" role="tab" data-k="on" aria-selected="false">Yakında çıkacak</button>
+    <button class="tab" role="tab" data-k="sonuc" aria-selected="false">Sonuçlananlar</button>
+  </div>
+  <div class="bar">
+    <input type="search" id="q" placeholder="Ara: şehir, iş, kurum…" aria-label="Ara">
+    <select id="km" aria-label="Mesafe"><option value="999">Tüm mesafeler</option><option value="30">≤ 30 km</option><option value="50">≤ 50 km</option><option value="70">≤ 70 km</option></select>
+    <select id="st" aria-label="Durum"><option value="">Tüm durumlar</option><option value="-">İşaretsiz</option><option>İncele</option><option>Teklif Ver</option><option>Teklif Verildi</option><option>Pas</option></select>
+    <label class="chk"><input type="checkbox" id="nw"> Sadece yeni</label>
+    <a class="xl" href="Ihaleler.xlsx">Excel indir ↓</a>
+  </div>
+  <div class="list" id="list"></div>
+  <footer id="foot"></footer>
+</div>
+<script>
+{
+const D = __DATA__;
+const M = __META__;
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const KEY = "ihale-durum";
+let marks = {};
+try { marks = JSON.parse(localStorage.getItem(KEY) || "{}"); } catch (e) {}
+const save = () => { try { localStorage.setItem(KEY, JSON.stringify(marks)); } catch (e) {} };
+let tab = "acik";
+const q = document.getElementById("q"), km = document.getElementById("km"), st = document.getElementById("st"), nw = document.getElementById("nw");
+const list = document.getElementById("list");
+
+document.getElementById("sub").textContent = `${M.merkez} çevresi ${M.km} km · güncellendi ${M.guncel}`;
+const week = D.acik.filter(t => t.kalan !== null && t.kalan <= 7).length;
+document.getElementById("stats").innerHTML = [
+  [D.acik.length, "açık ihale"], [D.acik.filter(t => t.yeni).length + D.on.filter(t => t.yeni).length, "yeni (bugün)"],
+  [week, "son tarih 7 gün içinde"], [D.on.length, "yakında çıkacak"]
+].map(([n, l]) => `<div class="stat"><b>${esc(n)}</b><span>${esc(l)}</span></div>`).join("");
+document.getElementById("foot").innerHTML =
+  `Kaynaklar: ${esc(M.kaynaklar)}. Her sabah otomatik güncellenir; bir günün ilanları ertesi sabah görünür. ` +
+  `Durum işaretleri sadece bu tarayıcıda saklanır. Teklif, ilan sayfasındaki ihale platformu üzerinden verilir. ` +
+  `Bazı küçük belediye ilanları (sadece kendi sitesinde yayınlananlar) bu kaynaklarda olmayabilir.`;
+
+function card(t) {
+  const m = marks[t.id] || "";
+  let dl = "";
+  if (tab === "acik") {
+    const cls = t.kalan === null ? "" : t.kalan < 7 ? " r" : t.kalan < 14 ? " a" : "";
+    dl = t.son ? `<span class="dl${cls}">Son: ${esc(t.son)}${t.kalan !== null ? ` · ${esc(t.kalan)} gün` : ""}</span>` : `<span class="dl">Son tarih ilanda</span>`;
+  } else if (tab === "on") {
+    dl = `<span class="dl">Yayın: ${esc(t.yayin)}</span>`;
+  } else {
+    dl = `<span class="dl">${esc(t.yayin)}</span>` + (t.kazanan ? `<span class="m">Kazanan: <b>${esc(t.kazanan)}</b></span>` : "") +
+      (t.bedel ? `<span class="m">· ${esc(Math.round(t.bedel).toLocaleString("de-DE"))} €</span>` : "");
+  }
+  const sel = tab === "sonuc" ? "" : `<select data-id="${esc(t.id)}" aria-label="Durum">${["", "İncele", "Teklif Ver", "Teklif Verildi", "Pas"].map(o => `<option${o === m ? " selected" : ""} value="${esc(o)}">${esc(o || "Durum…")}</option>`).join("")}</select>`;
+  const place = [t.yer, t.km !== null ? `${t.km} km${t.tahmini ? " (yakl.)" : ""}` : ""].filter(Boolean).join(" · ");
+  return `<article class="card${t.yeni ? " new" : ""}">
+    <div class="sc" title="Uygunluk puanı">${esc(t.puan)}</div>
+    <div class="t">${t.yeni ? '<span class="nw">YENİ</span>' : ""}${esc(t.baslik || "(başlıksız)")}</div>
+    <div class="m">${esc(t.makam)}${place ? " — " + esc(place) : ""}${t.tur ? " · " + esc(t.tur) : ""}${t.deger ? " · ~" + esc(Math.round(t.deger).toLocaleString("de-DE")) + " €" : ""}</div>
+    <div>
+      <div class="row">${dl}</div>
+      <div class="why">${esc(t.neden)}${t.lotlar ? " · Lose: " + esc(t.lotlar) : ""}</div>
+      <div class="row"><a class="btn" href="${esc(t.link)}" target="_blank" rel="noopener">İlanı aç</a>${t.belge ? `<a class="btn o" href="${esc(t.belge)}" target="_blank" rel="noopener">Belgeler / platform</a>` : ""}${sel}</div>
+    </div>
+  </article>`;
+}
+
+function render() {
+  const s = q.value.trim().toLocaleLowerCase("de");
+  const max = +km.value;
+  const items = D[tab].filter(t =>
+    (!s || [t.baslik, t.makam, t.yer, t.lotlar, t.neden, t.kazanan].join(" ").toLocaleLowerCase("de").includes(s)) &&
+    (t.km === null || t.km <= max) && (!nw.checked || t.yeni) &&
+    (!st.value || (st.value === "-" ? !marks[t.id] : marks[t.id] === st.value)));
+  list.innerHTML = items.length ? items.map(card).join("") : `<div class="empty">Bu filtreye uyan ilan yok.</div>`;
+}
+
+document.querySelectorAll(".tab").forEach(b => b.addEventListener("click", () => {
+  tab = b.dataset.k;
+  document.querySelectorAll(".tab").forEach(x => x.setAttribute("aria-selected", x === b));
+  render();
+}));
+[q, km, st, nw].forEach(el => el.addEventListener("input", render));
+list.addEventListener("change", e => {
+  const id = e.target.dataset && e.target.dataset.id;
+  if (!id) return;
+  if (e.target.value) marks[id] = e.target.value; else delete marks[id];
+  save();
+});
+render();
+}
+</script>
+</body>
+</html>

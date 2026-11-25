@@ -1,0 +1,43 @@
+name: Ihale taramasi
+
+on:
+  schedule:
+    - cron: "10 5 * * *"   # her gun ~06:10 (Almanya saati, kis)
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: tara
+  cancel-in-progress: false
+
+jobs:
+  tara:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      TZ: Europe/Berlin
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install requests openpyxl
+      - name: Onbellek (indirilen gunluk paketler)
+        uses: actions/cache@v4
+        with:
+          path: |
+            veri/bkms
+            veri/DE_plz.zip
+          key: veri-${{ github.run_id }}
+          restore-keys: veri-
+      - name: Tara
+        run: python ihale_radari.py --cikti docs/Ihaleler.xlsx --html docs/index.html
+      - name: Sonucu kaydet
+        run: |
+          git config user.name "ihale-radari-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add docs veri/durum.json
+          git commit -m "Tarama $(date +'%d.%m.%Y %H:%M')" || echo "degisiklik yok"
+          git push
