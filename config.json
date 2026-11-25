@@ -95,7 +95,13 @@
     "kauf von",
     "rasenmäher",
     "kehrmaschine",
-    "fahrzeug"
+    "fahrzeug",
+    "baustelleneinrichtung",
+    "holzernte",
+    "bestandespflege",
+    "holzbringung",
+    "anbau an klinik",
+    "frei finanzierten"
   ],
   "email": {
     "aktif": false,

@@ -68,6 +68,7 @@ footer{color:var(--mut);font-size:13px;margin-top:28px;line-height:1.6}
   </div>
   <div class="bar">
     <input type="search" id="q">
+    <select id="tp"><option value="bakim"></option><option value="yapim"></option><option value=""></option></select>
     <select id="km"><option value="999"></option><option value="30">≤ 30 km</option><option value="50">≤ 50 km</option><option value="70">≤ 70 km</option><option value="85">≤ 85 km</option></select>
     <select id="st"></select>
     <label class="chk"><input type="checkbox" id="nw"> <span id="nwl"></span></label>
@@ -84,7 +85,7 @@ const M = __META__;
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const T = {
  tr: {title:"İhale Radarı", sub:(m,k,g)=>`${m} çevresi ${k} km · güncellendi ${g}`, s1:"açık ihale", s2:"yeni (bugün)", s3:"son tarih 7 gün içinde", s4:"yakında çıkacak",
-   t_acik:"Açık ihaleler", t_on:"Yakında çıkacak", t_sonuc:"Sonuçlananlar", q:"Ara: şehir, iş, kurum…", allkm:"Tüm mesafeler", allst:"Tüm durumlar", unmarked:"İşaretsiz",
+   tp_bakim:"Bakım işleri (çim, hecke, ağaç, kış)", tp_yapim:"Peyzaj yapım (Außenanlagen)", tp_all:"Tüm işler", t_acik:"Açık ihaleler", t_on:"Yakında çıkacak", t_sonuc:"Sonuçlananlar", q:"Ara: şehir, iş, kurum…", allkm:"Tüm mesafeler", allst:"Tüm durumlar", unmarked:"İşaretsiz",
    onlynew:"Sadece yeni", xl:"Excel indir ↓", score:"puan", son:"Son", days:"gün", nodl:"Son tarih ilanda", pub:"Yayın", winner:"Kazanan", approx:"yakl.",
    open:"İlanı aç", docs:"Belgeler / platform", status:"Durum…", lots:"Lose", empty:"Bu filtreye uyan ilan yok.", nw:"YENİ", untitled:"(başlıksız)",
    legend:"Soldaki sayı uygunluk puanı (0–100): peyzaj iş kodu (CPV) +45, başlıkta peyzaj kelimesi +20–35, metinde +15'e kadar, yakınlık +20'ye kadar. 80+ kesin sizin işiniz, 50–70 bakmaya değer.",
@@ -92,7 +93,7 @@ const T = {
    st:{"İncele":"İncele","Teklif Ver":"Teklif Ver","Teklif Verildi":"Teklif Verildi","Pas":"Pas"},
    foot:k=>`Kaynaklar: ${k}. Her sabah otomatik güncellenir; bir günün ilanları ertesi sabah görünür. Durum işaretleri sadece bu tarayıcıda saklanır. Teklif, ilan sayfasındaki ihale platformu üzerinden verilir. Bazı küçük belediye ilanları (sadece kendi sitesinde yayınlananlar) bu kaynaklarda olmayabilir.`},
  de: {title:"Ausschreibungsradar", sub:(m,k,g)=>`Umkreis ${k} km um ${m} · aktualisiert ${g}`, s1:"offene Ausschreibungen", s2:"neu (heute)", s3:"Frist in 7 Tagen", s4:"Vorinformationen",
-   t_acik:"Offene Ausschreibungen", t_on:"Vorinformationen", t_sonuc:"Vergeben", q:"Suche: Ort, Leistung, Vergabestelle…", allkm:"Alle Entfernungen", allst:"Alle Status", unmarked:"Ohne Markierung",
+   tp_bakim:"Pflege (Mahd, Hecke, Baum, Winterdienst)", tp_yapim:"GaLaBau-Neubau (Außenanlagen)", tp_all:"Alle Leistungen", t_acik:"Offene Ausschreibungen", t_on:"Vorinformationen", t_sonuc:"Vergeben", q:"Suche: Ort, Leistung, Vergabestelle…", allkm:"Alle Entfernungen", allst:"Alle Status", unmarked:"Ohne Markierung",
    onlynew:"Nur neue", xl:"Excel herunterladen ↓", score:"Punkte", son:"Frist", days:"Tage", nodl:"Frist siehe Bekanntmachung", pub:"Veröffentlicht", winner:"Zuschlag an", approx:"ca.",
    open:"Bekanntmachung öffnen", docs:"Unterlagen / Plattform", status:"Status…", lots:"Lose", empty:"Keine Ausschreibungen für diesen Filter.", nw:"NEU", untitled:"(ohne Titel)",
    legend:"Die Zahl links ist die Passgenauigkeit (0–100): GaLaBau-CPV-Code +45, Fachbegriff im Titel +20–35, im Text bis +15, Nähe bis +20. Ab 80 klar passend, 50–70 prüfenswert.",
@@ -108,7 +109,7 @@ try { marks = JSON.parse(localStorage.getItem(KEY) || "{}"); } catch (e) {}
 const save = () => { try { localStorage.setItem(KEY, JSON.stringify(marks)); } catch (e) {} };
 let tab = "acik";
 const $ = id => document.getElementById(id);
-const q = $("q"), km = $("km"), st = $("st"), nw = $("nw"), list = $("list");
+const tp = $("tp"), q = $("q"), km = $("km"), st = $("st"), nw = $("nw"), list = $("list");
 const STV = ["İncele", "Teklif Ver", "Teklif Verildi", "Pas"];
 const why = s => { let o = String(s || ""); for (const [a, b] of Object.entries(T[L].why)) o = o.split(a).join(b); return o; };
 
@@ -124,6 +125,7 @@ function chrome() {
   document.querySelectorAll(".tab").forEach(b => b.textContent = t["t_" + b.dataset.k]);
   q.placeholder = t.q; q.setAttribute("aria-label", t.q);
   km.options[0].textContent = t.allkm;
+  tp.options[0].textContent = t.tp_bakim; tp.options[1].textContent = t.tp_yapim; tp.options[2].textContent = t.tp_all;
   const cur = st.value;
   st.innerHTML = `<option value="">${esc(t.allst)}</option><option value="-">${esc(t.unmarked)}</option>` + STV.map(v => `<option value="${esc(v)}">${esc(t.st[v])}</option>`).join("");
   st.value = cur;
@@ -165,7 +167,7 @@ function render() {
   const max = +km.value;
   const items = D[tab].filter(x =>
     (!s || [x.baslik, x.makam, x.yer, x.lotlar, x.neden, x.kazanan].join(" ").toLocaleLowerCase("de").includes(s)) &&
-    (x.km === null || x.km <= max) && (!nw.checked || x.yeni) &&
+    (!tp.value || x.is === tp.value) && (x.km === null || x.km <= max) && (!nw.checked || x.yeni) &&
     (!st.value || (st.value === "-" ? !marks[x.id] : marks[x.id] === st.value)));
   list.innerHTML = items.length ? items.map(card).join("") : `<div class="empty">${esc(T[L].empty)}</div>`;
 }
@@ -180,7 +182,7 @@ document.querySelectorAll(".tab").forEach(b => b.addEventListener("click", () =>
   document.querySelectorAll(".tab").forEach(x => x.setAttribute("aria-selected", x === b));
   render();
 }));
-[q, km, st, nw].forEach(el => el.addEventListener("input", render));
+[tp, q, km, st, nw].forEach(el => el.addEventListener("input", render));
 list.addEventListener("change", e => {
   const id = e.target.dataset && e.target.dataset.id;
   if (!id) return;

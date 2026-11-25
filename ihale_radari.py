@@ -772,6 +772,14 @@ def build_excel(path: Path, acik, on, sonuc, marks, new_ids, cfg, stats) -> Path
 
 
 # ----------------------------------------------------------------- web sayfası
+BAKIM = re.compile(r"pflege|mäh|mahd|rasen|baum|gehölz|hecke|winterdienst|schnee|streu|unterhaltung|kontrolle|fäll|"
+                   r"rodung|wildkraut|unkraut|begleitgrün|grauflächen|friedhof|facility", re.I)
+
+
+def is_tipi(t: dict) -> str:
+    """bakim = Pflege/Unterhaltung/Winterdienst; yapim = GaLaBau-Neubau (Außenanlagen herstellen)."""
+    return "bakim" if BAKIM.search(t["baslik"] + " " + t["lotlar"]) else "yapim"
+
 def build_html(path: Path, acik, on, sonuc, new_ids, cfg, stats) -> None:
     tpl = (BASE / "sayfa_sablonu.html").read_text(encoding="utf-8")
     now = dt.datetime.now()
@@ -784,6 +792,7 @@ def build_html(path: Path, acik, on, sonuc, new_ids, cfg, stats) -> None:
             "son": fmt_d(t["son_tarih"]), "kalan": (t["son_tarih"] - now).days if t["son_tarih"] else None,
             "yayin": fmt_d(t["yayin"])[:10], "link": t["link"], "belge": t["belge"],
             "kazanan": t["kazanan"], "bedel": t["kazanan_deger"], "yeni": t["id"] in new_ids,
+            "is": is_tipi(t),
         }
     data = {"acik": [row(t) for t in acik], "on": [row(t) for t in on], "sonuc": [row(t) for t in sonuc]}
     meta = {"merkez": cfg["merkez_ad"], "km": cfg["yaricap_km"], "guncel": now.strftime("%d.%m.%Y %H:%M"),
