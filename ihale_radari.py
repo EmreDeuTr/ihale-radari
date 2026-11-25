@@ -270,10 +270,19 @@ TOWN_STOP = {"garten", "linden", "grund", "wald", "berge", "hagen a.t.w.", "brü
              "berg", "baum", "pflege", "rasen", "garten", "hecke"}
 
 
-def town_from_text(text: str):
-    """Başlıkta geçen NRW yer adından konum: 'Örtlichkeit Kürten', 'bei Würselen', 'AM Dorsten'."""
+CUE = re.compile(r"\b(?:in|bei|AM|am|Örtlichkeit|Bereich|Stadtgebiet|Stadt|Gemeinde|Raum|Kreis|SM|Ortslage)\s+"
+                 r"([A-ZÄÖÜ][a-zäöüß]+(?:[ -][A-ZÄÖÜ][a-zäöüß]+)?)")
+
+
+def town_from_text(text: str, strict: bool = False):
+    """Başlıkta geçen NRW yer adından konum: 'Örtlichkeit Kürten', 'bei Würselen', 'AM Dorsten'.
+    strict=True: sadece 'in/bei/AM/Bereich …' gibi bir yer ifadesinden sonra gelen adı kabul et."""
     best = None
-    words = re.findall(r"[A-ZÄÖÜ][a-zäöüß]+", text or "")
+    if strict:
+        found = CUE.findall(text or "")
+        words = [w for f in found for w in (f, f.split(" ")[0], f.split("-")[0])]
+    else:
+        words = re.findall(r"[A-ZÄÖÜ][a-zäöüß]+", text or "")
     pairs = [f"{a} {b}" for a, b in zip(words, words[1:])] + re.findall(r"[A-ZÄÖÜ][a-zäöüß]+-[A-ZÄÖÜ][a-zäöüß]+", text or "")
     for w in pairs + words:
         for cand in (w,):
@@ -588,8 +597,9 @@ def score_all(items: list[dict], cfg: dict, plz_tab: dict) -> list[dict]:
             _, la, lo = NUTS3[t["nuts"]]
             km = haversine(*home, la, lo)
             km_kaynak = "~Kreis"
-        elif (t["nuts"] in ("", "DEA") or (t["nuts"].startswith("DEA") and len(t["nuts"]) < 5)) and \
-                (hit := town_from_text(t["baslik"] + " " + t["lotlar"]) or town_from_text(t["makam"])):
+        elif (t["nuts"].startswith("DEA") and len(t["nuts"]) < 5 and
+              (hit := town_from_text(t["baslik"] + " " + t["lotlar"]) or town_from_text(t["makam"]))) or \
+                (t["nuts"] == "" and (hit := town_from_text(t["baslik"] + " " + t["lotlar"], strict=True))):
             km = haversine(*home, hit[1], hit[2])
             km_kaynak = "~Ort"
             t["yer"] = t["yer"] or hit[0]
